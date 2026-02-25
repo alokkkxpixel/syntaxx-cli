@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import User from "../models/User.js";
+import User from "../model/User.js";
 
 const registerSchema = z.object({
   username: z.string().min(3),

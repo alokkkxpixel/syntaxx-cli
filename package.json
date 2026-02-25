@@ -1,16 +1,25 @@
 {
   "name": "syntaxx",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Syntaxx CLI – production-ready starter templates",
   "bin": {
     "syntaxx": "./bin/index.js"
   },
   "type": "module",
-  "keywords": ["cli", "starter", "express", "nextjs"],
+  "keywords": [
+    "cli",
+    "starter",
+    "express",
+    "nextjs"
+  ],
   "license": "MIT",
   "dependencies": {
+    "chalk": "^5.3.0",
+    "execa": "^9.6.1",
     "fs-extra": "^11.2.0",
-    "prompts": "^2.4.2",
-    "chalk": "^5.3.0"
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }
