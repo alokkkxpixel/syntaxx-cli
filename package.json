@@ -1,6 +1,6 @@
 {
   "name": "syntaxx",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Syntaxx CLI – production-ready starter templates",
   "bin": {
     "syntaxx": "./bin/index.js"
