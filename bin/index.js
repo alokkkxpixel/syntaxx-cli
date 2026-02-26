@@ -10,7 +10,27 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/* ------------------ CLI CONFIG ------------------ */
+/* ---------------------------------- */
+/* Utils                              */
+/* ---------------------------------- */
+
+function detectPackageManager() {
+  const ua = process.env.npm_config_user_agent || "";
+
+  if (ua.includes("pnpm")) return "pnpm";
+  if (ua.includes("bun")) return "bun";
+  return "npm";
+}
+
+function getInstallCommand(pm) {
+  if (pm === "pnpm") return ["pnpm", ["install"]];
+  if (pm === "bun") return ["bun", ["install"]];
+  return ["npm", ["install"]];
+}
+
+/* ---------------------------------- */
+/* Starters                           */
+/* ---------------------------------- */
 
 const STARTERS = {
   "express-auth": {
@@ -20,54 +40,30 @@ const STARTERS = {
   },
 };
 
-/* ------------------ HELPERS ------------------ */
+/* ---------------------------------- */
+/* Core Logic                         */
+/* ---------------------------------- */
 
-function detectPackageManager() {
-  const ua = process.env.npm_config_user_agent || "";
-
-  if (ua.includes("pnpm")) return "pnpm";
-  if (ua.includes("yarn")) return "yarn";
-  if (ua.includes("bun")) return "bun";
-
-  return "npm";
-}
-
-async function ensureEmptyDir(dir) {
-  const exists = await fs.pathExists(dir);
-  if (!exists) return true;
-
-  const files = await fs.readdir(dir);
-  if (files.length === 0) return true;
-
-  const { confirm } = await prompts({
-    type: "confirm",
-    name: "confirm",
-    message: "Directory is not empty. Continue anyway?",
-    initial: false,
-  });
-
-  if (!confirm) {
-    console.log(chalk.red("❌ Cancelled"));
-    process.exit(1);
-  }
-}
-
-/* ------------------ CORE LOGIC ------------------ */
-
-async function createProject({ starter, projectName, installDeps }) {
+async function createProject(starter, installDeps) {
   const template = STARTERS[starter];
+  const targetDir = process.cwd();
   const templateDir = path.join(__dirname, "../templates", template.dir);
-  const targetDir = projectName
-    ? path.join(process.cwd(), projectName)
-    : process.cwd();
 
   if (!(await fs.pathExists(templateDir))) {
     console.log(chalk.red("❌ Template not found"));
     process.exit(1);
   }
 
-  await fs.ensureDir(targetDir);
-  await ensureEmptyDir(targetDir);
+  // Prevent overwriting existing files
+  const files = await fs.readdir(targetDir);
+  if (files.length > 0) {
+    console.log(
+      chalk.red(
+        "❌ Target directory is not empty. Please run in an empty folder.",
+      ),
+    );
+    process.exit(1);
+  }
 
   await fs.copy(templateDir, targetDir, {
     filter: (src) => !src.includes("node_modules"),
@@ -77,28 +73,31 @@ async function createProject({ starter, projectName, installDeps }) {
 
   if (installDeps) {
     const pm = detectPackageManager();
+    const [cmd, args] = getInstallCommand(pm);
+
     console.log(chalk.yellow(`\n📦 Installing dependencies (${pm})...\n`));
 
-    await execa(pm, ["install"], {
+    await execa(cmd, args, {
       cwd: targetDir,
       stdio: "inherit",
     });
   }
 
-  console.log(chalk.green("\n🎉 Project ready!\n"));
+  console.log(chalk.green("\n✅ Setup complete!\n"));
   console.log(chalk.cyan("Next steps:"));
-  if (projectName) console.log(`  cd ${projectName}`);
+  console.log(`  cd ${path.basename(targetDir)}`);
   console.log(`  ${template.runCmd}\n`);
 }
 
-/* ------------------ CLI ENTRY ------------------ */
+/* ---------------------------------- */
+/* CLI Entry                          */
+/* ---------------------------------- */
 
 async function run() {
   console.log(chalk.cyan("\n🚀 Syntaxx CLI\n"));
 
   const args = process.argv.slice(2);
   let starter = args[0];
-  const projectName = args[1];
 
   if (!starter) {
     const res = await prompts({
@@ -126,11 +125,7 @@ async function run() {
     initial: true,
   });
 
-  await createProject({
-    starter,
-    projectName,
-    installDeps,
-  });
+  await createProject(starter, installDeps);
 }
 
 run();
