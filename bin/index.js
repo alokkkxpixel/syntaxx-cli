@@ -44,18 +44,21 @@ const STARTERS = {
 /* Core Logic                         */
 /* ---------------------------------- */
 
-async function createProject(starter, installDeps) {
+async function createProject(starter, installDeps, targetDir) {
   const template = STARTERS[starter];
-  const targetDir = process.cwd();
   const templateDir = path.join(__dirname, "../templates", template.dir);
+  const fullTargetDir = path.resolve(process.cwd(), targetDir);
 
   if (!(await fs.pathExists(templateDir))) {
     console.log(chalk.red("❌ Template not found"));
     process.exit(1);
   }
 
+  // Ensure target directory exists
+  await fs.ensureDir(fullTargetDir);
+
   // Prevent overwriting existing files
-  const files = await fs.readdir(targetDir);
+  const files = await fs.readdir(fullTargetDir);
   if (files.length > 0) {
     console.log(
       chalk.red(
@@ -65,8 +68,11 @@ async function createProject(starter, installDeps) {
     process.exit(1);
   }
 
-  await fs.copy(templateDir, targetDir, {
-    filter: (src) => !src.includes("node_modules"),
+  await fs.copy(templateDir, fullTargetDir, {
+    filter: (src) => {
+      const relativePath = path.relative(templateDir, src);
+      return !relativePath.split(path.sep).includes("node_modules");
+    },
   });
 
   console.log(chalk.green("✔ Files created"));
@@ -78,14 +84,18 @@ async function createProject(starter, installDeps) {
     console.log(chalk.yellow(`\n📦 Installing dependencies (${pm})...\n`));
 
     await execa(cmd, args, {
-      cwd: targetDir,
+      cwd: fullTargetDir,
       stdio: "inherit",
     });
   }
 
   console.log(chalk.green("\n✅ Setup complete!\n"));
+
+  const isCurrentDir = fullTargetDir === process.cwd();
   console.log(chalk.cyan("Next steps:"));
-  console.log(`  cd ${path.basename(targetDir)}`);
+  if (!isCurrentDir) {
+    console.log(`  cd ${targetDir}`);
+  }
   console.log(`  ${template.runCmd}\n`);
 }
 
@@ -98,6 +108,7 @@ async function run() {
 
   const args = process.argv.slice(2);
   let starter = args[0];
+  let targetDir = args[1];
 
   if (!starter) {
     const res = await prompts({
@@ -118,6 +129,16 @@ async function run() {
     process.exit(1);
   }
 
+  if (!targetDir) {
+    const res = await prompts({
+      type: "text",
+      name: "targetDir",
+      message: "Where should we create the project?",
+      initial: ".",
+    });
+    targetDir = res.targetDir || ".";
+  }
+
   const { installDeps } = await prompts({
     type: "confirm",
     name: "installDeps",
@@ -125,7 +146,7 @@ async function run() {
     initial: true,
   });
 
-  await createProject(starter, installDeps);
+  await createProject(starter, installDeps, targetDir);
 }
 
 run();
