@@ -63,7 +63,7 @@ async function createProject(starter, installDeps, targetDir) {
     process.exit(1);
   }
 
-  console.log(chalk.yellow("\n📥 Downloading template from GitHub...\n"));
+  console.log(chalk.cyan("\n✨ Initializing your project...\n"));
 
   try {
     await downloadTemplate(template.repo, {
@@ -104,11 +104,36 @@ async function createProject(starter, installDeps, targetDir) {
 /* ---------------------------------- */
 
 async function run() {
+  const args = process.argv.slice(2);
+
+  // Handle flags
+  if (args.includes("--list") || args.includes("-l")) {
+    console.log(chalk.cyan("\n📋 Available Templates:\n"));
+    Object.entries(STARTERS).forEach(([key, val]) => {
+      console.log(`${chalk.green("• " + key.padEnd(15))} ${val.title}`);
+    });
+    console.log(chalk.gray("\nUsage: syntaxx <template-name> [target-dir]\n"));
+    process.exit(0);
+  }
+
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(chalk.cyan("\n🚀 Syntaxx CLI - Usage Guide\n"));
+    console.log("  syntaxx <template> [dir]    Create a new project");
+    console.log("  syntaxx --list, -l          List all available templates");
+    console.log("  syntaxx --help, -h          Show this help message\n");
+    process.exit(0);
+  }
+
   console.log(chalk.cyan("\n🚀 Syntaxx CLI\n"));
 
-  const args = process.argv.slice(2);
   let starter = args[0];
   let targetDir = args[1];
+
+  // If the first argument is a path (starts with . or /), treat it as a directory
+  if (starter && (starter.startsWith(".") || starter.startsWith("/"))) {
+    targetDir = starter;
+    starter = null;
+  }
 
   if (!starter) {
     const res = await prompts({
@@ -121,11 +146,13 @@ async function run() {
       })),
     });
 
+    if (!res.starter) process.exit(0);
     starter = res.starter;
   }
 
   if (!STARTERS[starter]) {
     console.log(chalk.red(`❌ Unknown starter: ${starter}`));
+    console.log(chalk.gray("Run 'syntaxx --list' to see all templates."));
     process.exit(1);
   }
 
