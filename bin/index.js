@@ -6,6 +6,7 @@ import fs from "fs-extra";
 import path from "path";
 import { execa } from "execa";
 import { fileURLToPath } from "url";
+import { downloadTemplate } from "giget";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,7 +36,7 @@ function getInstallCommand(pm) {
 const STARTERS = {
   "express-auth": {
     title: "Express + JWT Auth",
-    dir: "express-auth",
+    repo: "gh:alokkkxpixel/syntaxx-templates/templates/express-auth",
     runCmd: "npm run dev",
   },
 };
@@ -46,13 +47,7 @@ const STARTERS = {
 
 async function createProject(starter, installDeps, targetDir) {
   const template = STARTERS[starter];
-  const templateDir = path.join(__dirname, "../templates", template.dir);
   const fullTargetDir = path.resolve(process.cwd(), targetDir);
-
-  if (!(await fs.pathExists(templateDir))) {
-    console.log(chalk.red("❌ Template not found"));
-    process.exit(1);
-  }
 
   // Ensure target directory exists
   await fs.ensureDir(fullTargetDir);
@@ -68,14 +63,19 @@ async function createProject(starter, installDeps, targetDir) {
     process.exit(1);
   }
 
-  await fs.copy(templateDir, fullTargetDir, {
-    filter: (src) => {
-      const relativePath = path.relative(templateDir, src);
-      return !relativePath.split(path.sep).includes("node_modules");
-    },
-  });
+  console.log(chalk.yellow("\n📥 Downloading template from GitHub...\n"));
 
-  console.log(chalk.green("✔ Files created"));
+  try {
+    await downloadTemplate(template.repo, {
+      dir: fullTargetDir,
+      force: true,
+    });
+    console.log(chalk.green("✔ Files created"));
+  } catch (error) {
+    console.log(chalk.red("❌ Failed to download template"));
+    console.error(error);
+    process.exit(1);
+  }
 
   if (installDeps) {
     const pm = detectPackageManager();
