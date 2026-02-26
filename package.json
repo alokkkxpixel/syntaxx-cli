@@ -1,11 +1,14 @@
 {
   "name": "syntaxx",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "type": "module",
   "bin": {
     "syntaxx": "bin/index.js"
   },
-  "files": ["bin", "templates"],
+  "files": [
+    "bin",
+    "templates"
+  ],
   "dependencies": {
     "chalk": "^5.3.0",
     "execa": "^9.6.1",
